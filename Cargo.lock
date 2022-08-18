@@ -385,7 +385,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rs-port-scanner"
+name = "rmap-lite"
 version = "0.1.0"
 dependencies = [
  "clap",
