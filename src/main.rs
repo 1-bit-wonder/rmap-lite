@@ -1,8 +1,9 @@
-use clap::Parser;
+use clap::{Parser};
 use indicatif::ProgressBar;
+use dns_lookup::lookup_host;
 use tokio::{net::{TcpStream, ToSocketAddrs}};
 use futures::{StreamExt, stream::FuturesUnordered};
-use std::{vec::Vec, time::Instant, net::Ipv4Addr, str::FromStr, ops::Range};
+use std::{vec::Vec, time::Instant, net::Ipv4Addr, ops::Range, str::FromStr};
 
 /// A simple concurrent portscanner in Rust.
 #[derive(Parser, Debug)]
@@ -46,7 +47,9 @@ async fn scan(target: Ipv4Addr, range: Range<u16>) -> Vec<u16> {
 #[tokio::main]
 async fn main() {
     let args = Cli::parse();
-    let target = Ipv4Addr::from_str(&args.target).unwrap();
+    let ips: Vec<std::net::IpAddr> = lookup_host(&args.target).unwrap();
+    let ip = ips[0].to_string();
+    let target = Ipv4Addr::from_str(&ip).unwrap();
     let range = Range {start: args.port_from, end: args.port_to};
     let timer = Instant::now();
     let open_ports = scan(target, range).await;
