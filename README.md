@@ -1,12 +1,6 @@
 # rmap-lite
 A simple concurrent port scanner in Rust
 
-> :warning: This software was written purely for my own education. It comes with zero guarantees.
-> Unauthorized port scanning could be considered illegal. *Please be careful*. :warning:
-
-<br>
-<br>
-
 ```
 USAGE:
     rs-port-scanner [OPTIONS]
