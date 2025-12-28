@@ -5,24 +5,23 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     net::{Ipv4Addr, SocketAddr},
     process,
-    str::FromStr,
     time::{Duration, Instant},
 };
 use tokio::{net::TcpStream, time::timeout};
 
 /// A simple concurrent portscanner in Rust.
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[command(author, version, about)]
 struct Cli {
-    #[clap(short, long, value_parser, default_value = "127.0.0.1")]
+    #[arg(short, long, default_value = "127.0.0.1")]
     target: String,
-    #[clap(long, value_parser, default_value = "1")]
+    #[arg(long, default_value_t = 1)]
     port_from: u16,
-    #[clap(long, value_parser, default_value = "65535")]
+    #[arg(long, default_value_t = 65535)]
     port_to: u16,
-    #[clap(long, value_parser, default_value = "1000")]
+    #[arg(long, default_value_t = 1000)]
     concurrency: usize,
-    #[clap(long, value_parser, default_value = "1500")]
+    #[arg(long, default_value_t = 1500)]
     timeout: u64,
 }
 
@@ -30,7 +29,7 @@ async fn is_open(target_ip: Ipv4Addr, port: u16, timeout_ms: u64) -> Option<u16>
     let addr = SocketAddr::new(target_ip.into(), port);
     let timeout_duration = Duration::from_millis(timeout_ms);
 
-    if let Ok(Ok(_)) = timeout(timeout_duration, TcpStream::connect(&addr)).await {
+    if let Ok(Ok(_)) = timeout(timeout_duration, TcpStream::connect(addr)).await {
         Some(port)
     } else {
         None
@@ -51,11 +50,11 @@ async fn scan(
     bar.set_style(
         ProgressStyle::default_bar()
             .template("{elapsed_precise} [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
-            .unwrap() // This is safe because the template is static and valid.
+            .expect("valid progress bar template")
             .progress_chars("##-"),
     );
 
-    let open_ports: Vec<u16> = stream::iter(ports_to_scan)
+    let mut open_ports: Vec<u16> = stream::iter(ports_to_scan)
         .map(|port| {
             let bar_clone = bar.clone();
             async move {
@@ -65,11 +64,12 @@ async fn scan(
             }
         })
         .buffer_unordered(concurrency)
-        .filter_map(|p| async move { p })
+        .filter_map(std::future::ready)
         .collect()
         .await;
 
     bar.finish();
+    open_ports.sort_unstable();
 
     open_ports
 }
@@ -86,18 +86,13 @@ async fn main() {
         }
     };
 
-    let ip_addr_str = if let Some(ip) = ips.into_iter().find(|ip| ip.is_ipv4()) {
-        ip.to_string()
-    } else {
-        eprintln!("No IPv4 address found for target '{}'", args.target);
-        process::exit(1);
-    };
-
-    let target_ip = match Ipv4Addr::from_str(&ip_addr_str) {
-        Ok(ip) => ip,
-        Err(_) => {
-            // This should ideally not happen since we filtered for IPv4, but for robustness:
-            eprintln!("Failed to parse IP address '{}'", ip_addr_str);
+    let target_ip = match ips.into_iter().find_map(|ip| match ip {
+        std::net::IpAddr::V4(v4) => Some(v4),
+        _ => None,
+    }) {
+        Some(ip) => ip,
+        None => {
+            eprintln!("No IPv4 address found for target '{}'", args.target);
             process::exit(1);
         }
     };
@@ -119,9 +114,7 @@ async fn main() {
         timer.elapsed().as_secs_f32()
     );
     if !open_ports.is_empty() {
-        let mut sorted_ports = open_ports;
-        sorted_ports.sort_unstable();
-        println!("{:?}", sorted_ports);
+        println!("{:?}", open_ports);
     }
 }
 
