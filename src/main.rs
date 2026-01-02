@@ -182,12 +182,20 @@ mod tests {
         let min_port = std::cmp::min(port1, port2);
         let max_port = std::cmp::max(port1, port2);
 
-        let mut open_ports = scan(ip, min_port, max_port, 100, 1000).await;
-        open_ports.sort_unstable();
+        let open_ports = scan(ip, min_port, max_port, 100, 1000).await;
 
-        let mut expected_ports = vec![port1, port2];
-        expected_ports.sort_unstable();
-
-        assert_eq!(open_ports, expected_ports);
+        // Verify our ports are in the results (other ports may also be open)
+        assert!(
+            open_ports.contains(&port1),
+            "Expected port {} to be found in {:?}",
+            port1,
+            open_ports
+        );
+        assert!(
+            open_ports.contains(&port2),
+            "Expected port {} to be found in {:?}",
+            port2,
+            open_ports
+        );
     }
 }

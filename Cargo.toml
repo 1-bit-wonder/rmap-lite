@@ -11,3 +11,11 @@ dns-lookup = "1.0.8"
 futures = "0.3.23"
 indicatif = "0.17.0"
 tokio = { version = "1.20.1", features = ["full"] }
+
+[dev-dependencies]
+futures = "0.3.23"
+tokio = { version = "1.20.1", features = ["full"] }
+
+[[bench]]
+name = "scanner_benchmarks"
+harness = false
